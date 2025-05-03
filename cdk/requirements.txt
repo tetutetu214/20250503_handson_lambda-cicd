@@ -3,3 +3,4 @@ constructs>=10.0.0,<11.0.0
 # 最新のapigatewayv2-alphaバージョンを使う
 aws-cdk.aws-apigatewayv2-alpha
 aws-cdk.aws-apigatewayv2-integrations-alpha
+aws-cdk
