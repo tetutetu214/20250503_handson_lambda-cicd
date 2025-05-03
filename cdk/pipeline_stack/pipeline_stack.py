@@ -2,11 +2,9 @@ import os
 import aws_cdk as cdk
 from constructs import Construct
 from aws_cdk import (
-    aws_ecr as ecr,
     aws_lambda as lambda_,
     aws_iam as iam,
     aws_codedeploy as codedeploy,
-    # aws_apigatewayv2 はまだ stable ではないため Alpha モジュールを使用
     aws_apigatewayv2_alpha as apigwv2,
     aws_apigatewayv2_integrations_alpha as apigw_integrations,
     Duration,
@@ -20,8 +18,6 @@ class PipelineStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # ======== 設定変数（ここにまとめる） ========
-        # ECR関連
-        ECR_REPO_NAME = "my-lambda-container-repo"  # ECRリポジトリ名
         
         # Lambda関連
         LAMBDA_MEMORY = 512  # Lambda関数のメモリサイズ(MB)
@@ -36,18 +32,7 @@ class PipelineStack(Stack):
         APP_NAME = "MyLambdaApplicationPy"  # CodeDeployアプリケーション名
         ALIAS_NAME = "live"  # Lambdaエイリアス名
         
-        # GitHub Actionsから渡されるイメージタグ
-        IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest")  # 環境変数から取得、なければ'latest'
-        
-        # ======== リソース定義（以下変更なし） ========
-        # --- ECR リポジトリ ---
-        repository = ecr.Repository(
-            self, "LambdaEcrRepo",
-            repository_name=ECR_REPO_NAME,
-            removal_policy=RemovalPolicy.DESTROY,  # ハンズオン用
-            auto_delete_images=True,  # ハンズオン用。リポジトリ削除時にイメージも削除
-        )
-
+        # ======== リソース定義 ========
         # --- Lambda 関数の IAM ロール ---
         lambda_role = iam.Role(
             self, "LambdaExecutionRole",
@@ -61,9 +46,8 @@ class PipelineStack(Stack):
         my_function = lambda_.Function(
             self, "MyLambdaFunction",
             # コンテナイメージを指定
-            code=lambda_.Code.from_ecr_image(
-                repository=repository,
-                tag_or_digest=IMAGE_TAG  # Actionsでビルドしたタグを指定
+            code=lambda_.Code.from_asset(
+                os.path.join(os.path.dirname(__file__), "../../app")
             ),
             # コンテナイメージの場合は以下を指定
             handler=lambda_.Handler.FROM_IMAGE,
@@ -105,7 +89,7 @@ class PipelineStack(Stack):
             )
         )
 
-        # --- (オプション) API Gateway (HTTP API) ---
+        # --- API Gateway (HTTP API) ---
         http_api = apigwv2.HttpApi(
             self, "MyHttpApi",
             api_name=API_NAME,
@@ -120,7 +104,6 @@ class PipelineStack(Stack):
         )
 
         # --- Outputs ---
-        cdk.CfnOutput(self, "EcrRepositoryUri", value=repository.repository_uri)
         cdk.CfnOutput(self, "LambdaFunctionName", value=my_function.function_name)
         cdk.CfnOutput(self, "LambdaFunctionArn", value=my_function.function_arn)
         cdk.CfnOutput(self, "LambdaLiveAliasArn", value=alias.function_arn)
