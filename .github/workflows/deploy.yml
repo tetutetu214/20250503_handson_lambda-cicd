@@ -61,4 +61,8 @@ jobs:
           python -c "import sys; print(sys.path)"
           echo "--- Running CDK deploy ---"
           # CDK CLIをPythonモジュールとして実行
+          source .venv/bin/activate
+          echo "--- Attempting to import aws_cdk.cli ---"
+          python -c "import aws_cdk.cli" || echo "Failed to import aws_cdk.cli directly"
+          echo "--- Running CDK deploy ---"
           python -m aws_cdk.cli deploy ${{ env.CDK_STACK_NAME }} --require-approval never
