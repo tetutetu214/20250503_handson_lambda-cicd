@@ -2,6 +2,7 @@ import os
 import aws_cdk as cdk
 from constructs import Construct
 from aws_cdk import (
+    aws_ecr as ecr,
     aws_lambda as lambda_,
     aws_iam as iam,
     aws_codedeploy as codedeploy,
@@ -13,7 +14,6 @@ from aws_cdk import (
 )
 
 class PipelineStack(Stack):
-
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -32,20 +32,19 @@ class PipelineStack(Stack):
         APP_NAME = "MyLambdaApplicationPy"  # CodeDeployアプリケーション名
         ALIAS_NAME = "live"  # Lambdaエイリアス名
 
-        # GitHub Actionsから渡される完全なイメージURI
-        ECR_IMAGE_URI = os.environ.get("ECR_IMAGE_URI")
-        if not ECR_IMAGE_URI:
-            # ローカル実行などのためのフォールバック (必要に応じて)
-            print("Warning: ECR_IMAGE_URI environment variable not set. Using default or placeholder.")
-            # 例: アカウントIDとリージョンからデフォルトリポジトリとlatestタグを仮定
-            account_id = cdk.Aws.ACCOUNT_ID
-            region = cdk.Aws.REGION
-            ecr_repo_name = f"cdk-hnb659fds-container-assets-{account_id}-{region}"
-            ECR_IMAGE_URI = f"{account_id}.dkr.ecr.{region}.amazonaws.com/{ecr_repo_name}:latest"
-            # または、エラーにする
-            # raise ValueError("ECR_IMAGE_URI environment variable is required.")
+        # ECRリポジトリ名 (Bootstrapで作成されたもの)
+        ECR_REPO_NAME = f"cdk-hnb659fds-container-assets-{cdk.Aws.ACCOUNT_ID}-{cdk.Aws.REGION}"
+
+        # GitHub Actionsから渡されるイメージタグ
+        IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest") # 環境変数から取得
         
         # ======== リソース定義 ========
+        # --- ECR リポジトリの参照 ---
+        repository = ecr.Repository.from_repository_name( # リポジトリを参照
+            self, "LambdaEcrRepo",
+            repository_name=ECR_REPO_NAME
+        )
+
         # --- Lambda 関数の IAM ロール ---
         lambda_role = iam.Role(
             self, "LambdaExecutionRole",
@@ -55,12 +54,13 @@ class PipelineStack(Stack):
             ],
         )
 
-        # --- Lambda 関数 (ECRイメージURIを直接指定) ---
+        # --- Lambda 関数 (ECRイメージを参照) ---
         my_function = lambda_.Function(
             self, "MyLambdaFunction",
             code=lambda_.Code.from_ecr_image(
-                # repository パラメータは使わない
-                image_uri=ECR_IMAGE_URI # 完全なURIを渡す
+                repository=repository, # リポジトリオブジェクトを渡す
+                tag_or_digest=IMAGE_TAG # タグを渡す
+                # image_uri は使わない
             ),
             handler=lambda_.Handler.FROM_IMAGE,
             runtime=lambda_.Runtime.FROM_IMAGE,

@@ -1,122 +1,85 @@
-import os
-import aws_cdk as cdk
-from constructs import Construct
-from aws_cdk import (
-    aws_ecr as ecr,
-    aws_lambda as lambda_,
-    aws_iam as iam,
-    aws_codedeploy as codedeploy,
-    aws_apigatewayv2_alpha as apigwv2,
-    aws_apigatewayv2_integrations_alpha as apigw_integrations,
-    Duration,
-    RemovalPolicy,
-    Stack,
-)
+name: Deploy Lambda Container via CDK (Python)
 
-class PipelineStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)
+on:
+  push:
+    branches:
+      - master # masterブランチへのプッシュでトリガー
 
-        # ======== 設定変数（ここにまとめる） ========
-        
-        # Lambda関連
-        LAMBDA_MEMORY = 512  # Lambda関数のメモリサイズ(MB)
-        LAMBDA_TIMEOUT = 30  # Lambda関数のタイムアウト(秒)
-        LAMBDA_MESSAGE = "Hello from CDK !"  # 環境変数
-        
-        # API Gateway関連
-        API_NAME = "LambdaContainerApiPy"  # API名
-        API_PATH = "/hello"  # APIパス
-        
-        # CodeDeploy関連
-        APP_NAME = "MyLambdaApplicationPy"  # CodeDeployアプリケーション名
-        ALIAS_NAME = "live"  # Lambdaエイリアス名
+permissions:
+  id-token: write # OIDC トークンを発行するために必要
+  contents: read  # リポジトリのコンテンツを読み取るために必要
 
-        # ECRリポジトリ名 (Bootstrapで作成されたもの)
-        ECR_REPO_NAME = f"cdk-hnb659fds-container-assets-{cdk.Aws.ACCOUNT_ID}-{cdk.Aws.REGION}"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1 # 対象のAWSリージョンに変更してください
+      CDK_STACK_NAME: LambdaPipelineStackPy    # CDKスタック名 (app.pyのスタックIDと合わせる)
+      ECR_REPOSITORY: cdk-hnb659fds-container-assets-${{ secrets.AWS_ACCOUNT_ID }}-us-east-1
 
-        # GitHub Actionsから渡されるイメージタグ
-        IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest") # 環境変数から取得
-        
-        # ======== リソース定義 ========
-        # --- ECR リポジトリの参照 ---
-        repository = ecr.Repository.from_repository_name( # リポジトリを参照
-            self, "LambdaEcrRepo",
-            repository_name=ECR_REPO_NAME
-        )
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        # --- Lambda 関数の IAM ロール ---
-        lambda_role = iam.Role(
-            self, "LambdaExecutionRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-            ],
-        )
+      # Python 環境のセットアップ
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # CDKとLambdaで使うPythonバージョン
 
-        # --- Lambda 関数 (ECRイメージを参照) ---
-        my_function = lambda_.Function(
-            self, "MyLambdaFunction",
-            code=lambda_.Code.from_ecr_image(
-                repository=repository, # リポジトリオブジェクトを渡す
-                tag_or_digest=IMAGE_TAG # タグを渡す
-                # image_uri は使わない
-            ),
-            handler=lambda_.Handler.FROM_IMAGE,
-            runtime=lambda_.Runtime.FROM_IMAGE,
-            role=lambda_role,
-            environment={"MESSAGE": LAMBDA_MESSAGE},
-            memory_size=LAMBDA_MEMORY,
-            timeout=Duration.seconds(LAMBDA_TIMEOUT),
-            current_version_options=lambda_.VersionOptions(
-                removal_policy=RemovalPolicy.RETAIN,
-            )
-        )
+      # Node.js 環境のセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-        # --- Lambda エイリアス (CodeDeployが管理) ---
-        alias = lambda_.Alias(
-            self, "LiveAlias",
-            alias_name=ALIAS_NAME,
-            version=my_function.current_version,  # 初期状態では最新バージョンを指す
-        )
+      # AWS CDK CLI (npm) のインストール
+      - name: Install AWS CDK CLI via npm
+        run: npm install -g aws-cdk
 
-        # --- CodeDeploy アプリケーション & デプロイグループ ---
-        application = codedeploy.LambdaApplication(
-            self, "CodeDeployApplication",
-            application_name=APP_NAME,
-        )
+      # AWS Credentials の設定
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubAction-AssumeRoleWithAction
+          aws-region: ${{ env.AWS_REGION }}
 
-        codedeploy.LambdaDeploymentGroup(
-            self, "DeploymentGroup",
-            application=application,
-            alias=alias,
-            deployment_config=codedeploy.LambdaDeploymentConfig.CANARY_10_PERCENT_5_MINUTES,  # カナリアリリース設定
-            auto_rollback=codedeploy.AutoRollbackConfig(
-                # 必要に応じて自動ロールバック設定
-                failed_deployment=True,  # デプロイ失敗時にロールバック
-                # deployment_in_alarm=True, # アラーム発報時にロールバック (別途CloudWatch Alarmの設定が必要)
-            )
-        )
+      # Amazon ECR へのログイン
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-        # --- API Gateway (HTTP API) ---
-        http_api = apigwv2.HttpApi(
-            self, "MyHttpApi",
-            api_name=API_NAME,
-            description="API Gateway for Lambda Container (Python CDK)",
-            # CORS設定など必要に応じて追加
-        )
+      # Python 依存関係のインストール (CDK含む)
+      - name: Install Python dependencies
+        working-directory: ./cdk
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-        http_api.add_routes(
-            path=API_PATH,
-            methods=[apigwv2.HttpMethod.GET],
-            integration=apigw_integrations.HttpLambdaIntegration("LambdaIntegration", alias)
-        )
+      # コンテナイメージのタグを決定
+      - name: Set Image Tag
+        id: image_tag
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-        # --- Outputs ---
-        cdk.CfnOutput(self, "LambdaFunctionName", value=my_function.function_name)
-        cdk.CfnOutput(self, "LambdaFunctionArn", value=my_function.function_arn)
-        cdk.CfnOutput(self, "LambdaLiveAliasArn", value=alias.function_arn)
-        cdk.CfnOutput(
-            self, "ApiEndpoint",
-            value=f"{http_api.url}{API_PATH}" if http_api.url else "NoAPIGateway"
-        )
+      # Docker イメージをビルド、タグ付け、ECRへプッシュ
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} # 例: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+          IMAGE_TAG: ${{ steps.image_tag.outputs.tag }}
+        run: |
+          ECR_IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t $ECR_IMAGE_URI app
+          docker push $ECR_IMAGE_URI
+          echo "ecr_image_uri=$ECR_IMAGE_URI" >> $GITHUB_OUTPUT # 完全なURIを出力
+
+      # CDK Deploy の実行
+      - name: Deploy CDK Stack
+        working-directory: ./cdk
+        env:
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+          # CDKスタックに完全なイメージURIを渡す
+          ECR_IMAGE_URI: ${{ steps.build-image.outputs.ecr_image_uri }}
+        run: |
+          echo "--- Running CDK deploy with image URI: ${ECR_IMAGE_URI} ---"
+          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never -vvv
