@@ -38,7 +38,7 @@ jobs:
 
       # AWS CDK CLI (npm) のインストール
       - name: Install AWS CDK CLI via npm
-        run: npm install -g aws-cdk@2.130.0
+        run: npm install -g aws-cdk
 
       # AWS Credentials の設定
       - name: Configure AWS credentials
