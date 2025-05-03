@@ -1,5 +1,5 @@
 aws-cdk-lib>=2.130.0,<3.0.0
 constructs>=10.0.0,<11.0.0
-# API Gateway v2 (HTTP API) の Alpha モジュール
-aws-cdk.aws-apigatewayv2-alpha>=2.130.0a0,<3.0.0a0
-aws-cdk.aws-apigatewayv2-integrations-alpha>=2.130.0a0,<3.0.0a0
+# 最新のapigatewayv2-alphaバージョンを使う
+aws-cdk.aws-apigatewayv2-alpha
+aws-cdk.aws-apigatewayv2-integrations-alpha

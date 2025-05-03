@@ -19,12 +19,33 @@ class PipelineStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # ======== 設定変数（ここにまとめる） ========
+        # ECR関連
+        ECR_REPO_NAME = "my-lambda-container-repo"  # ECRリポジトリ名
+        
+        # Lambda関連
+        LAMBDA_MEMORY = 512  # Lambda関数のメモリサイズ(MB)
+        LAMBDA_TIMEOUT = 30  # Lambda関数のタイムアウト(秒)
+        LAMBDA_MESSAGE = "Hello from CDK (Python) deployed Lambda!"  # 環境変数
+        
+        # API Gateway関連
+        API_NAME = "LambdaContainerApiPy"  # API名
+        API_PATH = "/hello"  # APIパス
+        
+        # CodeDeploy関連
+        APP_NAME = "MyLambdaApplicationPy"  # CodeDeployアプリケーション名
+        ALIAS_NAME = "live"  # Lambdaエイリアス名
+        
+        # GitHub Actionsから渡されるイメージタグ
+        IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest")  # 環境変数から取得、なければ'latest'
+        
+        # ======== リソース定義（以下変更なし） ========
         # --- ECR リポジトリ ---
         repository = ecr.Repository(
             self, "LambdaEcrRepo",
-            repository_name="my-lambda-container-repo", # 任意の名前に変更
-            removal_policy=RemovalPolicy.DESTROY, # ハンズオン用。本番では RETAIN 推奨
-            auto_delete_images=True, # ハンズオン用。リポジトリ削除時にイメージも削除
+            repository_name=ECR_REPO_NAME,
+            removal_policy=RemovalPolicy.DESTROY,  # ハンズオン用
+            auto_delete_images=True,  # ハンズオン用。リポジトリ削除時にイメージも削除
         )
 
         # --- Lambda 関数の IAM ロール ---
@@ -37,54 +58,51 @@ class PipelineStack(Stack):
         )
 
         # --- Lambda 関数 (コンテナイメージ) ---
-        # GitHub Actionsから渡されるイメージタグをここで使う想定
-        image_tag = os.environ.get("IMAGE_TAG", "latest") # 環境変数から取得、なければ'latest'
-
         my_function = lambda_.Function(
             self, "MyLambdaFunction",
             # コンテナイメージを指定
             code=lambda_.Code.from_ecr_image(
                 repository=repository,
-                tag_or_digest=image_tag # Actionsでビルドしたタグを指定
+                tag_or_digest=IMAGE_TAG  # Actionsでビルドしたタグを指定
             ),
             # コンテナイメージの場合は以下を指定
             handler=lambda_.Handler.FROM_IMAGE,
             runtime=lambda_.Runtime.FROM_IMAGE,
             role=lambda_role,
             environment={
-                "MESSAGE": "Hello from CDK (Python) deployed Lambda!",
+                "MESSAGE": LAMBDA_MESSAGE,
             },
-            memory_size=512,
-            timeout=Duration.seconds(30),
+            memory_size=LAMBDA_MEMORY,
+            timeout=Duration.seconds(LAMBDA_TIMEOUT),
             # CodeDeployが古いバージョンを保持できるように設定
             current_version_options=lambda_.VersionOptions(
-                removal_policy=RemovalPolicy.RETAIN, # 古いバージョンを保持
+                removal_policy=RemovalPolicy.RETAIN,  # 古いバージョンを保持
             )
         )
 
         # --- Lambda エイリアス (CodeDeployが管理) ---
         alias = lambda_.Alias(
             self, "LiveAlias",
-            alias_name="live",
-            version=my_function.current_version, # 初期状態では最新バージョンを指す
+            alias_name=ALIAS_NAME,
+            version=my_function.current_version,  # 初期状態では最新バージョンを指す
         )
 
         # --- CodeDeploy アプリケーション & デプロイグループ ---
         application = codedeploy.LambdaApplication(
             self, "CodeDeployApplication",
-            application_name="MyLambdaApplicationPy", # 任意の名前に変更
+            application_name=APP_NAME,
         )
 
         codedeploy.LambdaDeploymentGroup(
             self, "DeploymentGroup",
             application=application,
             alias=alias,
-            deployment_config=codedeploy.LambdaDeploymentConfig.CANARY_10PERCENT_5MINUTES, # カナリアリリース設定
+            deployment_config=codedeploy.LambdaDeploymentConfig.CANARY_10PERCENT_5MINUTES,  # カナリアリリース設定
             # deployment_config=codedeploy.LambdaDeploymentConfig.LINEAR_10PERCENT_EVERY_1MINUTE # 段階的リリース
             # deployment_config=codedeploy.LambdaDeploymentConfig.ALL_AT_ONCE # 一括デプロイ
             auto_rollback=codedeploy.AutoRollbackConfig(
                 # 必要に応じて自動ロールバック設定
-                failed_deployment=True, # デプロイ失敗時にロールバック
+                failed_deployment=True,  # デプロイ失敗時にロールバック
                 # deployment_in_alarm=True, # アラーム発報時にロールバック (別途CloudWatch Alarmの設定が必要)
             )
         )
@@ -92,13 +110,13 @@ class PipelineStack(Stack):
         # --- (オプション) API Gateway (HTTP API) ---
         http_api = apigwv2.HttpApi(
             self, "MyHttpApi",
-            api_name="LambdaContainerApiPy",
+            api_name=API_NAME,
             description="API Gateway for Lambda Container (Python CDK)",
             # CORS設定など必要に応じて追加
         )
 
         http_api.add_routes(
-            path="/hello",
+            path=API_PATH,
             methods=[apigwv2.HttpMethod.GET],
             integration=apigw_integrations.HttpLambdaIntegration("LambdaIntegration", alias)
         )
@@ -110,5 +128,5 @@ class PipelineStack(Stack):
         cdk.CfnOutput(self, "LambdaLiveAliasArn", value=alias.function_arn)
         cdk.CfnOutput(
             self, "ApiEndpoint",
-            value=f"{http_api.url}hello" if http_api.url else "NoAPIGateway"
+            value=f"{http_api.url}{API_PATH}" if http_api.url else "NoAPIGateway"
         )
