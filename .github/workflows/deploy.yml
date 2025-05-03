@@ -34,7 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # または LTS バージョン
+          node-version: '22' # または LTS バージョン
 
       # AWS CDK CLI (npm) のインストール
       - name: Install AWS CDK CLI via npm
