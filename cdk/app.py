@@ -8,8 +8,8 @@ app = cdk.App()
 PipelineStack(app, "LambdaPipelineStackPy", # スタック名
     # 環境変数やAWSアカウント/リージョンをここで指定
     env=cdk.Environment(
-        account=os.getenv('CDK_DEFAULT_ACCOUNT'),
-        region=os.getenv('CDK_DEFAULT_REGION')
+        account=os.getenv('AWS_ACCOUNT_ID'),
+        region=os.getenv('AWS_DEFAULT_REGION')
     )
 )
 
