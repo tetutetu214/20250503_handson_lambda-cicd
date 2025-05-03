@@ -43,26 +43,17 @@ class PipelineStack(Stack):
         )
 
         # --- Lambda 関数 (コンテナイメージ) ---
-        from aws_cdk import aws_lambda as _lambda
-
-        my_function = lambda_.Function(
-            self, "MyLambdaFunction",
-            # コンテナイメージを指定
-            code=lambda_.Code.from_asset(
-                "../app" # cdk ディレクトリから見た相対パス
-            ),
-            handler=lambda_.Handler.FROM_IMAGE,
-            runtime=lambda_.Runtime.FROM_IMAGE,
-            role=lambda_role,
-            environment={
-                "MESSAGE": LAMBDA_MESSAGE,
-            },
-            memory_size=LAMBDA_MEMORY,
-            timeout=Duration.seconds(LAMBDA_TIMEOUT),
-            # CodeDeployが古いバージョンを保持できるように設定
-            current_version_options=lambda_.VersionOptions(
-                removal_policy=RemovalPolicy.RETAIN,  # 古いバージョンを保持
-            )
+        my_function = lambda_.DockerImageFunction(self, "MyLambdaFunction",
+            code=lambda_.DockerImageCode.from_image_asset(
+                    "../app" # cdk ディレクトリから見た相対パス
+                ),
+                role=lambda_role,
+                environment={"MESSAGE": LAMBDA_MESSAGE},
+                memory_size=LAMBDA_MEMORY,
+                timeout=Duration.seconds(LAMBDA_TIMEOUT),
+                current_version_options=lambda_.VersionOptions(
+                    removal_policy=RemovalPolicy.RETAIN,
+                )
         )
 
         # --- Lambda エイリアス (CodeDeployが管理) ---
