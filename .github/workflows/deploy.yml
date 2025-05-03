@@ -34,7 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22' # または LTS バージョン
+          node-version: '22'
 
       # AWS CDK CLI (npm) のインストール
       - name: Install AWS CDK CLI via npm
@@ -60,5 +60,9 @@ jobs:
         env:
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
         run: |
+          echo "--- Clearing CDK context and output ---"
+          cdk context --clear || echo "Failed to clear context (or no context)"
+          rm -rf cdk.out || echo "Failed to remove cdk.out (or not found)"
+          echo "--- Running CDK deploy ---"
           # npmでインストールしたCDK CLIを実行
           cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never
