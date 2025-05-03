@@ -1,0 +1,27 @@
+# Python
+*.py[cod]
+*.pyo
+__pycache__/
+.env
+*.egg-info/
+dist/
+build/
+wheels/
+*.egg
+.venv/
+venv/
+
+# AWS CDK
+cdk.out/
+cdk.context.json
+.cdk.staging/
+
+# IDE/Editor specific
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS specific
+.DS_Store
+Thumbs.db
