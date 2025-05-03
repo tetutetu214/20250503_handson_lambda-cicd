@@ -13,8 +13,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      AWS_REGION: ap-northeast-1 # 対象のAWSリージョンに変更してください
-      ECR_REPOSITORY: my-lambda-container-repo # CDKスタック内の定義と合わせる
+      AWS_REGION: us-east-1 # 対象のAWSリージョンに変更してください
       CDK_STACK_NAME: LambdaPipelineStackPy    # CDKスタック名 (app.pyのスタックIDと合わせる)
 
     steps:
@@ -27,17 +26,16 @@ jobs:
         with:
           python-version: '3.11' # CDKとLambdaで使うPythonバージョン
 
-      # AWS Credentials の設定 (変更なし)
+      # Docker Buildx のセットアップ (CDK AssetsがDockerビルドするため)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # AWS Credentials の設定 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubAction-AssumeRoleWithAction
           aws-region: ${{ env.AWS_REGION }}
-
-      # AWS ECR にログイン (変更なし)
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
 
       # Python 依存関係のインストール (CDK含む)
       - name: Install Python dependencies
@@ -46,28 +44,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # コンテナイメージのタグを決定 (変更なし)
-      - name: Set Image Tag
-        id: image_tag
-        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      # Docker イメージをビルド、タグ付け、ECRへプッシュ (変更なし)
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.image_tag.outputs.tag }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./app
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "ecr_image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
       # CDK Deploy の実行
       - name: Deploy CDK Stack
         working-directory: ./cdk
-        env:
-          # CDKスタックにイメージタグを渡す (環境変数経由)
-          IMAGE_TAG: ${{ steps.image_tag.outputs.tag }}
         run: |
-          # CDK CLIは Python 依存関係でインストールされるはず (なければ pip install aws-cdk-lib)
+          # CDK CLIは Python 依存関係でインストールされる
           cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never
