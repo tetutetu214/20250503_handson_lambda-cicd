@@ -41,7 +41,7 @@ class PipelineStack(Stack):
         
         # ======== リソース定義 ========
         # --- ECR リポジトリの参照 ---
-        repository = ecr.Repository.from_repository_name( # リポジトリを参照
+        repository = ecr.Repository.from_repository_name(
             self, "LambdaEcrRepo",
             repository_name=ECR_REPO_NAME
         )
