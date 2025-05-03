@@ -36,9 +36,14 @@ class PipelineStack(Stack):
         # ECRリポジトリ名 (Bootstrapで作成されたもの)
         ECR_REPO_NAME = f"cdk-hnb659fds-container-assets-{cdk.Aws.ACCOUNT_ID}-{cdk.Aws.REGION}"
 
-        # GitHub Actionsから渡されるイメージタグ
-        IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest") # 環境変数から取得
-        print(f"--- Using Image Tag: {IMAGE_TAG} ---")
+        # GitHub Actionsから渡されるイメージタグ (Contextから取得)
+        IMAGE_TAG = self.node.try_get_context("image_tag")
+        if not IMAGE_TAG:
+            # フォールバックまたはエラー処理
+            print("Warning: image_tag context not found. Using 'latest'.")
+            IMAGE_TAG = "latest"
+            # raise ValueError("Context variable 'image_tag' is required.")
+        print(f"--- Using Image Tag from context: {IMAGE_TAG} ---") # 確認用プリント
         
         # ======= リソース定義 ========
         # --- ECR リポジトリの参照 ---

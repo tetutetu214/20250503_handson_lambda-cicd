@@ -81,6 +81,6 @@ jobs:
           # CDKスタックに完全なイメージURIを渡す
           ECR_IMAGE_URI: ${{ steps.build-image.outputs.ecr_image_uri }}
         run: |
-          echo "IMAGE_TAG env var passed to CDK: $IMAGE_TAG"
           echo "--- Running CDK deploy with image URI: ${ECR_IMAGE_URI} ---"
-          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never -vvv
+          # -c オプションでコンテキストとしてイメージタグを渡す
+          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never -c image_tag=${{ steps.image_tag.outputs.tag }} -vvv
