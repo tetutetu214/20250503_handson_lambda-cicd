@@ -50,4 +50,3 @@ jobs:
         run: |
           # CDK CLIをPythonモジュールとして実行
           python -m aws_cdk.cli deploy ${{ env.CDK_STACK_NAME }} --require-approval never
-EOF
