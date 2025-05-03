@@ -49,11 +49,11 @@ class PipelineStack(Stack):
             self, "MyLambdaFunction",
             # コンテナイメージを指定
             code=lambda_.Code.from_asset(
-                os.path.join(os.path.dirname(__file__), "../../app")
+                "../app" # cdk ディレクトリから見た相対パス
             ),
-                handler=lambda_.Handler.FROM_IMAGE,
-                runtime=lambda_.Runtime.FROM_IMAGE,
-                role=lambda_role,
+            handler=lambda_.Handler.FROM_IMAGE,
+            runtime=lambda_.Runtime.FROM_IMAGE,
+            role=lambda_role,
             environment={
                 "MESSAGE": LAMBDA_MESSAGE,
             },
