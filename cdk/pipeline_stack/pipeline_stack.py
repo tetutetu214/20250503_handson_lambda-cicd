@@ -43,16 +43,17 @@ class PipelineStack(Stack):
         )
 
         # --- Lambda 関数 (コンテナイメージ) ---
+        from aws_cdk import aws_lambda as _lambda
+
         my_function = lambda_.Function(
             self, "MyLambdaFunction",
             # コンテナイメージを指定
             code=lambda_.Code.from_asset(
                 os.path.join(os.path.dirname(__file__), "../../app")
             ),
-            # コンテナイメージの場合は以下を指定
-            handler=lambda_.Handler.FROM_IMAGE,
-            runtime=lambda_.Runtime.FROM_IMAGE,
-            role=lambda_role,
+                handler=lambda_.Handler.FROM_IMAGE,
+                runtime=lambda_.Runtime.FROM_IMAGE,
+                role=lambda_role,
             environment={
                 "MESSAGE": LAMBDA_MESSAGE,
             },
