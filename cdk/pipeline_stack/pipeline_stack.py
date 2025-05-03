@@ -97,9 +97,7 @@ class PipelineStack(Stack):
             self, "DeploymentGroup",
             application=application,
             alias=alias,
-            deployment_config=codedeploy.LambdaDeploymentConfig.CANARY_10PERCENT_5MINUTES,  # カナリアリリース設定
-            # deployment_config=codedeploy.LambdaDeploymentConfig.LINEAR_10PERCENT_EVERY_1MINUTE # 段階的リリース
-            # deployment_config=codedeploy.LambdaDeploymentConfig.ALL_AT_ONCE # 一括デプロイ
+            deployment_config=codedeploy.LambdaDeploymentConfig.CANARY_10_PERCENT_5_MINUTES,  # カナリアリリース設定
             auto_rollback=codedeploy.AutoRollbackConfig(
                 # 必要に応じて自動ロールバック設定
                 failed_deployment=True,  # デプロイ失敗時にロールバック
