@@ -27,10 +27,6 @@ jobs:
         with:
           python-version: '3.10' # CDKとLambdaで使うPythonバージョン
 
-      # Docker Buildx のセットアップ (CDK AssetsがDockerビルドするため)
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v3
-
       # Node.js 環境のセットアップ
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -47,6 +43,11 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubAction-AssumeRoleWithAction
           aws-region: ${{ env.AWS_REGION }}
+
+      # Amazon ECR へのログイン
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       # Python 依存関係のインストール (CDK含む)
       - name: Install Python dependencies
