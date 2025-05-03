@@ -49,7 +49,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Python 依存関係のインストール (CDK含む)
+      # Python 依存関係のインストール
       - name: Install Python dependencies
         working-directory: ./cdk
         run: |
