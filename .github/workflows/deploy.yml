@@ -41,8 +41,10 @@ jobs:
       - name: Install Python dependencies
         working-directory: ./cdk
         run: |
+          python -m venv .venv # 仮想環境を作成
+          source .venv/bin/activate # 仮想環境を有効化
           python -m pip install --upgrade pip
-          pip install --force-reinstall -r requirements.txt
+          pip install -r requirements.txt
           echo "--- Installed packages (after pip install) ---"
           pip list
           echo "--- aws-cdk-lib details ---"
@@ -51,7 +53,10 @@ jobs:
       # CDK Deploy の実行
       - name: Deploy CDK Stack
         working-directory: ./cdk
+        env:
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
         run: |
+          source .venv/bin/activate
           echo "--- sys.path before CDK deploy ---"
           python -c "import sys; print(sys.path)"
           echo "--- Running CDK deploy ---"
