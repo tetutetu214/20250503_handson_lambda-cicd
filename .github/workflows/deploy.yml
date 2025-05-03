@@ -48,5 +48,6 @@ jobs:
       - name: Deploy CDK Stack
         working-directory: ./cdk
         run: |
-          # CDK CLIは Python 依存関係でインストールされる
-          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never
+          # CDK CLIをPythonモジュールとして実行
+          python -m aws_cdk.cli deploy ${{ env.CDK_STACK_NAME }} --require-approval never
+EOF
