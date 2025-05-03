@@ -39,7 +39,7 @@ class PipelineStack(Stack):
         # GitHub Actionsから渡されるイメージタグ
         IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest") # 環境変数から取得
         
-        # ======== リソース定義 ========
+        # ======= リソース定義 ========
         # --- ECR リポジトリの参照 ---
         repository = ecr.Repository.from_repository_name(
             self, "LambdaEcrRepo",
