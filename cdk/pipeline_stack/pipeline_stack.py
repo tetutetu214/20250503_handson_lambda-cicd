@@ -38,6 +38,7 @@ class PipelineStack(Stack):
 
         # GitHub Actionsから渡されるイメージタグ
         IMAGE_TAG = os.environ.get("IMAGE_TAG", "latest") # 環境変数から取得
+        print(f"--- Using Image Tag: {IMAGE_TAG} ---")
         
         # ======= リソース定義 ========
         # --- ECR リポジトリの参照 ---
