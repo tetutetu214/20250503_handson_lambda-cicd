@@ -14,7 +14,6 @@ from aws_cdk import (
 )
 
 class PipelineStack(Stack):
-
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -32,19 +31,6 @@ class PipelineStack(Stack):
         # CodeDeploy関連
         APP_NAME = "MyLambdaApplicationPy"  # CodeDeployアプリケーション名
         ALIAS_NAME = "live"  # Lambdaエイリアス名
-
-        # GitHub Actionsから渡される完全なイメージURI
-        ECR_IMAGE_URI = os.environ.get("ECR_IMAGE_URI")
-        if not ECR_IMAGE_URI:
-            # ローカル実行などのためのフォールバック (必要に応じて)
-            print("Warning: ECR_IMAGE_URI environment variable not set. Using default or placeholder.")
-            # 例: アカウントIDとリージョンからデフォルトリポジトリとlatestタグを仮定
-            account_id = cdk.Aws.ACCOUNT_ID
-            region = cdk.Aws.REGION
-            ecr_repo_name = f"cdk-hnb659fds-container-assets-{account_id}-{region}"
-            ECR_IMAGE_URI = f"{account_id}.dkr.ecr.{region}.amazonaws.com/{ecr_repo_name}:latest"
-            # または、エラーにする
-            # raise ValueError("ECR_IMAGE_URI environment variable is required.")
 
         # ECRリポジトリ名 (Bootstrapで作成されたもの)
         ECR_REPO_NAME = f"cdk-hnb659fds-container-assets-{cdk.Aws.ACCOUNT_ID}-{cdk.Aws.REGION}"
