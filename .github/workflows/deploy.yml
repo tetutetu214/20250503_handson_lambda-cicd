@@ -66,4 +66,4 @@ jobs:
           rm -rf cdk.out || echo "Failed to remove cdk.out (or not found)"
           echo "--- Running CDK deploy ---"
           # npmでインストールしたCDK CLIを実行
-          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never
+          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never -vvv
