@@ -3,7 +3,7 @@ name: Deploy Lambda Container via CDK (Python)
 on:
   push:
     branches:
-      - main # mainブランチへのプッシュでトリガー
+      - master # masterブランチへのプッシュでトリガー
 
 permissions:
   id-token: write # OIDC トークンを発行するために必要
