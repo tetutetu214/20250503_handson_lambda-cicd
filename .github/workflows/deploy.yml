@@ -30,25 +30,26 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Node.js 環境のセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # または LTS バージョン
+
+      # AWS CDK CLI (npm) のインストール
+      - name: Install AWS CDK CLI via npm
+        run: npm install -g aws-cdk
+
       # AWS Credentials の設定
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubAction-AssumeRoleWithAction
-          aws-region: ${{ env.AWS_REGION }}
 
       # Python 依存関係のインストール (CDK含む)
       - name: Install Python dependencies
         working-directory: ./cdk
         run: |
-          python -m venv .venv # 仮想環境を作成
-          source .venv/bin/activate # 仮想環境を有効化
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          echo "--- Installed packages (after pip install) ---"
-          pip list
-          echo "--- aws-cdk-lib details ---"
-          pip show aws-cdk-lib || echo "aws-cdk-lib not found"
 
       # CDK Deploy の実行
       - name: Deploy CDK Stack
@@ -56,13 +57,5 @@ jobs:
         env:
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
         run: |
-          source .venv/bin/activate
-          echo "--- sys.path before CDK deploy ---"
-          python -c "import sys; print(sys.path)"
-          echo "--- Running CDK deploy ---"
-          # CDK CLIをPythonモジュールとして実行
-          source .venv/bin/activate
-          echo "--- Attempting to import aws_cdk.cli ---"
-          python -c "import aws_cdk.cli" || echo "Failed to import aws_cdk.cli directly"
-          echo "--- Running CDK deploy ---"
-          python -m aws_cdk.cli deploy ${{ env.CDK_STACK_NAME }} --require-approval never
+          # npmでインストールしたCDK CLIを実行
+          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never
