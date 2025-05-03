@@ -94,7 +94,6 @@ class PipelineStack(Stack):
             self, "MyHttpApi",
             api_name=API_NAME,
             description="API Gateway for Lambda Container (Python CDK)",
-            # CORS設定など必要に応じて追加
         )
 
         http_api.add_routes(
