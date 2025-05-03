@@ -31,6 +31,19 @@ class PipelineStack(Stack):
         # CodeDeploy関連
         APP_NAME = "MyLambdaApplicationPy"  # CodeDeployアプリケーション名
         ALIAS_NAME = "live"  # Lambdaエイリアス名
+
+        # GitHub Actionsから渡される完全なイメージURI
+        ECR_IMAGE_URI = os.environ.get("ECR_IMAGE_URI")
+        if not ECR_IMAGE_URI:
+            # ローカル実行などのためのフォールバック (必要に応じて)
+            print("Warning: ECR_IMAGE_URI environment variable not set. Using default or placeholder.")
+            # 例: アカウントIDとリージョンからデフォルトリポジトリとlatestタグを仮定
+            account_id = cdk.Aws.ACCOUNT_ID
+            region = cdk.Aws.REGION
+            ecr_repo_name = f"cdk-hnb659fds-container-assets-{account_id}-{region}"
+            ECR_IMAGE_URI = f"{account_id}.dkr.ecr.{region}.amazonaws.com/{ecr_repo_name}:latest"
+            # または、エラーにする
+            # raise ValueError("ECR_IMAGE_URI environment variable is required.")
         
         # ======== リソース定義 ========
         # --- Lambda 関数の IAM ロール ---
@@ -42,18 +55,22 @@ class PipelineStack(Stack):
             ],
         )
 
-        # --- Lambda 関数 (コンテナイメージ) ---
-        my_function = lambda_.DockerImageFunction(self, "MyLambdaFunction",
-            code=lambda_.DockerImageCode.from_image_asset(
-                    "../app" # cdk ディレクトリから見た相対パス
-                ),
-                role=lambda_role,
-                environment={"MESSAGE": LAMBDA_MESSAGE},
-                memory_size=LAMBDA_MEMORY,
-                timeout=Duration.seconds(LAMBDA_TIMEOUT),
-                current_version_options=lambda_.VersionOptions(
-                    removal_policy=RemovalPolicy.RETAIN,
-                )
+        # --- Lambda 関数 (ECRイメージURIを直接指定) ---
+        my_function = lambda_.Function(
+            self, "MyLambdaFunction",
+            code=lambda_.Code.from_ecr_image(
+                # repository パラメータは使わない
+                image_uri=ECR_IMAGE_URI # 完全なURIを渡す
+            ),
+            handler=lambda_.Handler.FROM_IMAGE,
+            runtime=lambda_.Runtime.FROM_IMAGE,
+            role=lambda_role,
+            environment={"MESSAGE": LAMBDA_MESSAGE},
+            memory_size=LAMBDA_MEMORY,
+            timeout=Duration.seconds(LAMBDA_TIMEOUT),
+            current_version_options=lambda_.VersionOptions(
+                removal_policy=RemovalPolicy.RETAIN,
+            )
         )
 
         # --- Lambda エイリアス (CodeDeployが管理) ---

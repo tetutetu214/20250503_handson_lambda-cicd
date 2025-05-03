@@ -1,6 +1,5 @@
 name: Deploy Lambda Container via CDK (Python)
 
-
 on:
   push:
     branches:
@@ -16,6 +15,7 @@ jobs:
     env:
       AWS_REGION: us-east-1 # 対象のAWSリージョンに変更してください
       CDK_STACK_NAME: LambdaPipelineStackPy    # CDKスタック名 (app.pyのスタックIDと合わせる)
+      ECR_REPOSITORY: cdk-hnb659fds-container-assets-${{ secrets.AWS_ACCOUNT_ID }}-us-east-1
 
     steps:
       - name: Checkout code
@@ -49,22 +49,37 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Python 依存関係のインストール
+      # Python 依存関係のインストール (CDK含む)
       - name: Install Python dependencies
         working-directory: ./cdk
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # コンテナイメージのタグを決定
+      - name: Set Image Tag
+        id: image_tag
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # Docker イメージをビルド、タグ付け、ECRへプッシュ
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} # 例: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+          IMAGE_TAG: ${{ steps.image_tag.outputs.tag }}
+        run: |
+          ECR_IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t $ECR_IMAGE_URI ../app # ビルドコンテキストは ../app
+          docker push $ECR_IMAGE_URI
+          echo "ecr_image_uri=$ECR_IMAGE_URI" >> $GITHUB_OUTPUT # 完全なURIを出力
+
       # CDK Deploy の実行
       - name: Deploy CDK Stack
         working-directory: ./cdk
         env:
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+          # CDKスタックに完全なイメージURIを渡す
+          ECR_IMAGE_URI: ${{ steps.build-image.outputs.ecr_image_uri }}
         run: |
-          echo "--- Clearing CDK context and output ---"
-          cdk context --clear || echo "Failed to clear context (or no context)"
-          rm -rf cdk.out || echo "Failed to remove cdk.out (or not found)"
-          echo "--- Running CDK deploy ---"
-          # npmでインストールしたCDK CLIを実行
-          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never
+          echo "--- Running CDK deploy with image URI: ${ECR_IMAGE_URI} ---"
+          cdk deploy ${{ env.CDK_STACK_NAME }} --require-approval never -vvv
