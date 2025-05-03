@@ -43,6 +43,9 @@ jobs:
       # AWS Credentials の設定
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubAction-AssumeRoleWithAction
+          aws-region: ${{ env.AWS_REGION }}
 
       # Python 依存関係のインストール (CDK含む)
       - name: Install Python dependencies
