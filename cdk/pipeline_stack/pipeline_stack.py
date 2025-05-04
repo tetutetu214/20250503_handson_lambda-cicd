@@ -22,8 +22,8 @@ class PipelineStack(Stack):
         
         # Lambda関連
         LAMBDA_MEMORY = 512  # Lambda関数のメモリサイズ(MB)
-        LAMBDA_TIMEOUT = 30  # Lambda関数のタイムアウト(秒)
-        LAMBDA_MESSAGE = "Hello from CDK !"  # 環境変数
+        LAMBDA_TIMEOUT = 60  # Lambda関数のタイムアウト(秒)
+        LAMBDA_MESSAGE = "Hello from Lambda !"  # 出力させるメッセージ
         
         # API Gateway関連
         API_NAME = "LambdaContainerApiPy"  # API名
