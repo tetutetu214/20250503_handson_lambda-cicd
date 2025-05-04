@@ -123,7 +123,9 @@ class PipelineStack(Stack):
         cdk.CfnOutput(self, "LambdaFunctionName", value=my_function.function_name)
         cdk.CfnOutput(self, "LambdaFunctionArn", value=my_function.function_arn)
         cdk.CfnOutput(self, "LambdaLiveAliasArn", value=alias.function_arn)
+        # API Gateway の URL の末尾スラッシュを削除してからパスを結合
+        api_endpoint_url = http_api.url.rstrip('/') if http_api.url else None
         cdk.CfnOutput(
             self, "ApiEndpoint",
-            value=f"{http_api.url}{API_PATH}" if http_api.url else "NoAPIGateway"
+            value=f"{api_endpoint_url}{API_PATH}" if api_endpoint_url else "NoAPIGateway"
         )
