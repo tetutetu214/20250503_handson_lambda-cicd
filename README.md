@@ -110,25 +110,18 @@
 3.  GitHub Actions の完了後、`curl` を実行します。デプロイ直後の5分間は、古いメッセージと新しいメッセージが混在して返ってくることがあります（カナリアリリース）。5分経過すると、新しいメッセージのみが返ってくるようになります。
 
 ### 2.7. クリーンアップ
-
 ハンズオンで作成した AWS リソースを削除します。
 
-1.  **CDK スタックの削除:** CloudShell などから CDK プロジェクトの `cdk` ディレクトリに移動し、実行します。
-    ```bash
-    cd /path/to/your-app/cdk
-    cdk destroy LambdaPipelineStackPy
-    ```
-    *(権限エラーが出る場合は、CloudFormation コンソールから手動削除)*
-2.  **CDK Bootstrap 環境の削除:**
+1.  **CDK Bootstrap 環境の削除:**
     *   CloudFormation コンソールで `CDKToolkit` スタックを削除します。
     *   S3 コンソールで `cdk-<Qualifier>-assets-...` バケットを削除します (空にする必要あり)。
     *   ECR コンソールで `cdk-<Qualifier>-container-assets-...` リポジトリを削除します (空にする必要あり)。
-3.  **IAM ロールとポリシーの削除:**
+2.  **IAM ロールとポリシーの削除:**
     *   `GitHubAction-AssumeRoleWithAction` ロールを削除します。
     *   作成したカスタムポリシー (`GitHubAction-AssumeCdkRoles` など) を削除します。
-4.  **OIDC プロバイダの削除:**
+3.  **OIDC プロバイダの削除:**
     *   IAM コンソールの ID プロバイダから `token.actions.githubusercontent.com` を削除します。
-5.  **GitHub シークレットの削除:** リポジトリ設定から `AWS_ACCOUNT_ID` を削除します。
+4.  **GitHub シークレットの削除:** リポジトリ設定から `AWS_ACCOUNT_ID` を削除します。
 
 ## 3. トラブルシューティング (発生したエラーのサマリ)
 
