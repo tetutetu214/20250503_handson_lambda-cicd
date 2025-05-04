@@ -45,7 +45,7 @@ class PipelineStack(Stack):
             # raise ValueError("Context variable 'image_tag' is required.")
         print(f"--- Using Image Tag from context: {IMAGE_TAG} ---") # 確認用プリント
         
-        # ======= リソース定義 ========
+        # ====== リソース定義 ========
         # --- ECR リポジトリの参照 ---
         repository = ecr.Repository.from_repository_name(
             self, "LambdaEcrRepo",
