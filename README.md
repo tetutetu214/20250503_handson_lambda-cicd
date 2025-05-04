@@ -112,16 +112,13 @@
 ### 2.7. クリーンアップ
 ハンズオンで作成した AWS リソースを削除します。
 
-1.  **CDK Bootstrap 環境の削除:**
-    *   CloudFormation コンソールで `CDKToolkit` スタックを削除します。
-    *   S3 コンソールで `cdk-<Qualifier>-assets-...` バケットを削除します (空にする必要あり)。
-    *   ECR コンソールで `cdk-<Qualifier>-container-assets-...` リポジトリを削除します (空にする必要あり)。
-2.  **IAM ロールとポリシーの削除:**
-    *   `GitHubAction-AssumeRoleWithAction` ロールを削除します。
-    *   作成したカスタムポリシー (`GitHubAction-AssumeCdkRoles` など) を削除します。
-3.  **OIDC プロバイダの削除:**
-    *   IAM コンソールの ID プロバイダから `token.actions.githubusercontent.com` を削除します。
-4.  **GitHub シークレットの削除:** リポジトリ設定から `AWS_ACCOUNT_ID` を削除します。
+1.CloudFormation コンソールから`CDKToolkit`スタックを削除。
+2.S3 コンソールから `cdk-<Qualifier>-assets-...` バケットを削除。
+3.ECR コンソールから `cdk-<Qualifier>-container-assets-...` リポジトリを削除。
+4.IAM コンソールから `GitHubAction-AssumeRoleWithAction` ロールを削除。
+5.IAM コンソールから`GitHubAction-AssumeCdkRoles`ポリシーを削除。
+6.IAM コンソールの ID プロバイダから `token.actions.githubusercontent.com` を削除。
+7.**GitHubでの作業** リポジトリ設定から `AWS_ACCOUNT_ID` を削除。
 
 ## 3. トラブルシューティング (発生したエラーのサマリ)
 
@@ -144,11 +141,3 @@
 | `AccessDenied: ... sts:AssumeRole on .../cdk-...-file-publishing-role-...` | `cdk deploy` 実行時に、Bootstrap のファイル公開用ロールへの Assume Role 権限がないエラーが発生。                                                                      | `GitHubAction-AssumeRoleWithAction` ロールに、Bootstrap ロール群への `sts:AssumeRole` 権限がなかった。                                                                                              | Bootstrap ロール群への `sts:AssumeRole` を許可するカスタム IAM ポリシーを作成し、`GitHubAction-AssumeRoleWithAction` ロールにアタッチ。                                                                                             |
 | `AccessDenied: ... iam:PassRole on .../cdk-...-cfn-exec-role-...`        | `cdk deploy` 実行時に、CloudFormation 実行ロールへの PassRole 権限がないエラーが発生。                                                                               | `GitHubAction-AssumeRoleWithAction` ロールに、CloudFormation 実行ロールへの `iam:PassRole` 権限がなかった。                                                                                         | CloudFormation 実行ロールへの `iam:PassRole` を許可するカスタム IAM ポリシーを作成し、`GitHubAction-AssumeRoleWithAction` ロールにアタッチ（または既存カスタムポリシーに追加）。                                                            |
 | `Source image ...:latest does not exist.` (GitHub Actions - CloudFormation) | CloudFormation が Lambda 関数を作成しようとして、ECR イメージ `:latest` が見つからないエラーが発生。                                                                    | GitHub Actions から CDK へイメージタグ (コミットハッシュ) が環境変数経由で正しく渡されず、CDK コード側でデフォルトの `:latest` が使われてしまっていた。                                                | GitHub Actions の `cdk deploy` で `-c image_tag=<タグ>` (CDK Context) を使いタグを渡し、CDK コード側も `self.node.try_get_context("image_tag")` で受け取るように修正。                                                              |
-
-## 4. まとめ (得られた知見・今後の課題)
-
-### 4.1. 得られた知見
-
-*   CDK と GitHub Actions を組み合わせた CI/CD では、IAM 権限 (OIDC, AssumeRole, PassRole, 各サービス) の設定が重要であり、エラーから必要な権限を特定・追加していく必要がある。
-*   CDK Assets (特に Docker イメージ) の処理は便利だが、CI/CD 環境によっては原因不明のエラーが発生する場合があり、その際は Actions 側でビルド/プッシュし、CDK は参照する方式が有効な回避策となる。
-*   CDK CLI と CD
